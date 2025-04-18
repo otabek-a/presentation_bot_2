@@ -1,42 +1,37 @@
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    ContextTypes,
-    filters,
-)
+from telegram.ext import Updater,CommandHandler,MessageHandler,Filters,CallbackContext
+import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import re
 from salom import data_help
-
+token=os.getenv('TOKEN')
 a = data_help()
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(a)
+def help_command(update: Update, context: CallbackContext):
+    update.message.reply_text(a)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def start(update: Update, context: CallbackContext):
     reply_key = [['Pie chart', 'Bar chart'], ['Line graph']]
     make = ReplyKeyboardMarkup(reply_key, resize_keyboard=True)
-    await update.message.reply_text(
+    update.message.reply_text(
         'Yo, bro! 😎 This bot helps you create diagrams. Type /help to get started! 🌟🚀',
         reply_markup=make
     )
 
-async def pie_chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def pie_chart(update: Update, context: CallbackContext):
+    update.message.reply_text(
         'To create a pie chart 🍰, send a message after "pie/" (e.g., pie/name,value). Or just send "pie/values", bro 😜🎉.'
     )
 
-async def bar_chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def bar_chart(update: Update, context: CallbackContext):
+    update.message.reply_text(
         'To create a bar chart 📊, send a message after "bar/" (e.g., bar/name,value). Or just send "bar/values", bro 😎🔥.'
     )
 
-async def line_chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def line_chart(update: Update, context: CallbackContext):
+    update.message.reply_text(
         'To create a line graph 📈, send a message after "line/" (e.g., line/name,value). Or just send "line/values", bro 🚀👊.'
     )
 
@@ -74,7 +69,7 @@ def generate_chart(parts, chart_type):
     plt.savefig("chart.png")
     plt.close()
 
-async def check_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def check_data(update: Update, context: CallbackContext):
     text = update.message.text.lower()
     try:
         chart_type, data = text.split('/')
@@ -82,18 +77,23 @@ async def check_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if chart_type in ['pie', 'bar', 'line']:
             generate_chart(parts, chart_type)
             with open("chart.png", "rb") as photo:
-                await update.message.reply_photo(photo)
+                update.message.reply_photo(photo)
     except Exception as e:
-        await update.message.reply_text(f"Xatolik: {e}")
+        update.message.reply_text(f"Xatolik: {e}")
 
-app = ApplicationBuilder().token('YOUR_BOT_TOKEN_HERE').build()
+def main():
+    updater = Updater(token, use_context=True)
+    dp = updater.dispatcher
 
-app.add_handler(CommandHandler('start', start))
-app.add_handler(CommandHandler('help', help_command))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex('^Pie chart$'), pie_chart))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex('^Bar chart$'), bar_chart))
-app.add_handler(MessageHandler(filters.TEXT & filters.Regex('^Line graph$'), line_chart))
-app.add_handler(MessageHandler(filters.TEXT, check_data))
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('help', help_command))
+    dp.add_handler(MessageHandler(Filters.text('Pie chart'), pie_chart))
+    dp.add_handler(MessageHandler(Filters.text('Bar chart'), bar_chart))
+    dp.add_handler(MessageHandler(Filters.text('Line graph'), line_chart))
+    dp.add_handler(MessageHandler(Filters.text, check_data))
+
+    updater.start_polling()
+    updater.idle()
 
 if __name__ == '__main__':
-    app.run_polling()
+    main()
